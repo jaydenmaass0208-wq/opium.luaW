@@ -1,0 +1,321 @@
+--// 🖤 OP⛓IUM HUB (BLACK + RED) — FIXED MINIMIZE & DRAG
+
+task.wait(0.2)
+
+--------------------------------------------------
+-- SERVICES
+--------------------------------------------------
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local TeleportService = game:GetService("TeleportService")
+
+local Player = Players.LocalPlayer
+
+pcall(function()
+    CoreGui:FindFirstChild("OPIUM_GUI"):Destroy()
+    CoreGui:FindFirstChild("OPIUM_CURSOR"):Destroy()
+end)
+
+--------------------------------------------------
+-- COLORS
+--------------------------------------------------
+local BLACK = Color3.fromRGB(8,8,12)
+local DARK  = Color3.fromRGB(16,16,20)
+local WHITE = Color3.fromRGB(235,235,235)
+local RED   = Color3.fromRGB(160,20,25)
+
+--------------------------------------------------
+-- CUSTOM CURSOR (RED TRAIL)
+--------------------------------------------------
+UserInputService.MouseIconEnabled = false
+
+local CursorGui = Instance.new("ScreenGui", CoreGui)
+CursorGui.Name = "OPIUM_CURSOR"
+CursorGui.IgnoreGuiInset = true
+CursorGui.DisplayOrder = 1000
+
+local Cursor = Instance.new("Frame", CursorGui)
+Cursor.Size = UDim2.fromOffset(14,14)
+Cursor.BackgroundColor3 = BLACK
+Cursor.ZIndex = 1000
+Instance.new("UICorner", Cursor).CornerRadius = UDim.new(1,0)
+
+local CursorStroke = Instance.new("UIStroke", Cursor)
+CursorStroke.Color = RED
+CursorStroke.Thickness = 1.5
+
+local function spawnTrail(pos)
+    local t = Instance.new("Frame", CursorGui)
+    t.Size = UDim2.fromOffset(10,10)
+    t.Position = UDim2.fromOffset(pos.X-5, pos.Y-5)
+    t.BackgroundColor3 = RED
+    t.BackgroundTransparency = 0.45
+    t.ZIndex = 999
+    Instance.new("UICorner", t).CornerRadius = UDim.new(1,0)
+
+    TweenService:Create(t, TweenInfo.new(0.35), {
+        Size = UDim2.fromOffset(2,2),
+        BackgroundTransparency = 1
+    }):Play()
+
+    task.delay(0.35, function()
+        t:Destroy()
+    end)
+end
+
+RunService.RenderStepped:Connect(function()
+    local pos = UserInputService:GetMouseLocation()
+    Cursor.Position = UDim2.fromOffset(pos.X-7, pos.Y-7)
+    spawnTrail(pos)
+end)
+
+--------------------------------------------------
+-- GUI
+--------------------------------------------------
+local Gui = Instance.new("ScreenGui", CoreGui)
+Gui.Name = "OPIUM_GUI"
+Gui.ResetOnSpawn = false
+
+--------------------------------------------------
+-- MENU
+--------------------------------------------------
+local Menu = Instance.new("Frame", Gui)
+Menu.Size = UDim2.fromOffset(560,460)
+Menu.Position = UDim2.fromScale(0.5,0.5)
+Menu.AnchorPoint = Vector2.new(0.5,0.5)
+Menu.BackgroundColor3 = BLACK
+Menu.Active = true
+Menu.ClipsDescendants = true
+Instance.new("UICorner", Menu).CornerRadius = UDim.new(0,18)
+
+local Stroke = Instance.new("UIStroke", Menu)
+Stroke.Color = RED
+Stroke.Thickness = 1.5
+
+--------------------------------------------------
+-- HEADER
+--------------------------------------------------
+local Header = Instance.new("TextLabel", Menu)
+Header.Size = UDim2.new(1,-100,0,44)
+Header.Position = UDim2.new(0,12,0,10)
+Header.BackgroundTransparency = 1
+Header.Text = "OP⛓IUM"
+Header.Font = Enum.Font.GothamBlack
+Header.TextSize = 26
+Header.TextColor3 = WHITE
+Header.TextXAlignment = Enum.TextXAlignment.Left
+Header.Active = true
+
+--------------------------------------------------
+-- MINIMIZE BUTTON
+--------------------------------------------------
+local MinBtn = Instance.new("TextButton", Menu)
+MinBtn.Size = UDim2.fromOffset(36,28)
+MinBtn.Position = UDim2.new(1,-48,0,12)
+MinBtn.Text = "–"
+MinBtn.Font = Enum.Font.GothamBlack
+MinBtn.TextSize = 20
+MinBtn.TextColor3 = WHITE
+MinBtn.BackgroundColor3 = Color3.fromRGB(22,22,26)
+Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0,8)
+
+--------------------------------------------------
+-- SCROLL
+--------------------------------------------------
+local Scroll = Instance.new("ScrollingFrame", Menu)
+Scroll.Position = UDim2.new(0,0,0,64)
+Scroll.Size = UDim2.new(1,0,1,-160)
+Scroll.ScrollBarThickness = 6
+Scroll.ScrollBarImageColor3 = RED
+Scroll.BackgroundTransparency = 1
+Scroll.Active = true
+
+local Layout = Instance.new("UIListLayout", Scroll)
+Layout.Padding = UDim.new(0,12)
+Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    Scroll.CanvasSize = UDim2.new(0,0,0,Layout.AbsoluteContentSize.Y + 20)
+end)
+
+--------------------------------------------------
+-- DRAG (FIXED — HEADER ONLY)
+--------------------------------------------------
+do
+    local dragging = false
+    local dragStart, startPos
+
+    Header.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = Menu.Position
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
+            Menu.Position = startPos + UDim2.fromOffset(delta.X, delta.Y)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+end
+
+--------------------------------------------------
+-- MINIMIZE (FIXED)
+--------------------------------------------------
+local minimized = false
+local fullSize = Menu.Size
+
+MinBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+
+    Scroll.Visible = not minimized
+    Scroll.Active = not minimized
+    Scroll.ScrollingEnabled = not minimized
+
+    TweenService:Create(Menu, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
+        Size = minimized and UDim2.fromOffset(560,64) or fullSize
+    }):Play()
+
+    MinBtn.Text = minimized and "+" or "–"
+end)
+
+--------------------------------------------------
+-- LOADERS
+--------------------------------------------------
+local Loaders = {}
+
+local function AddScript(name, url)
+    local ran = false
+
+    local Row = Instance.new("Frame", Scroll)
+    Row.Size = UDim2.new(0.85,0,0,46)
+    Row.BackgroundColor3 = DARK
+    Instance.new("UICorner", Row).CornerRadius = UDim.new(0,12)
+
+    local Text = Instance.new("TextLabel", Row)
+    Text.Size = UDim2.new(1,-60,1,0)
+    Text.Position = UDim2.new(0,12,0,0)
+    Text.BackgroundTransparency = 1
+    Text.Text = name
+    Text.Font = Enum.Font.Gotham
+    Text.TextSize = 14
+    Text.TextColor3 = WHITE
+    Text.TextXAlignment = Enum.TextXAlignment.Left
+
+    local Box = Instance.new("TextButton", Row)
+    Box.Size = UDim2.fromOffset(24,24)
+    Box.Position = UDim2.new(1,-36,0.5,-12)
+    Box.BackgroundColor3 = Color3.fromRGB(30,30,34)
+    Box.Text = ""
+    Instance.new("UICorner", Box).CornerRadius = UDim.new(0,6)
+
+    local Check = Instance.new("TextLabel", Box)
+    Check.Size = UDim2.fromScale(1,1)
+    Check.BackgroundTransparency = 1
+    Check.Text = "✓"
+    Check.Font = Enum.Font.GothamBlack
+    Check.TextSize = 16
+    Check.TextColor3 = WHITE
+    Check.Visible = false
+
+    local function run()
+        if ran then return end
+        ran = true
+        Box.BackgroundColor3 = RED
+        Check.Visible = true
+        task.spawn(function()
+            pcall(function()
+                loadstring(game:HttpGet(url,true))()
+            end)
+        end)
+    end
+
+    Box.MouseButton1Click:Connect(run)
+    table.insert(Loaders, run)
+end
+
+--------------------------------------------------
+-- SCRIPT ROWS
+--------------------------------------------------
+AddScript("🌶️ Chilli Hub","https://raw.githubusercontent.com/tienkhanh1/spicy/main/Chilli.lua")
+AddScript("💧 AP","https://api.luarmor.net/files/v3/loaders/78ac6f1abace5ce6dba1ed4517b4c79f.lua")
+AddScript("🤖 Allow Script","https://pastebin.com/raw/aipXbhpf")
+AddScript("👺 MIRANDA 👺","https://api.luarmor.net/files/v3/loaders/dfa27a53ab31fcada5feb5c50be4799d.lua")
+
+--------------------------------------------------
+-- BUTTON BAR
+--------------------------------------------------
+local ButtonBar = Instance.new("Frame", Menu)
+ButtonBar.Size = UDim2.new(1,-24,0,48)
+ButtonBar.Position = UDim2.new(0,12,1,-56)
+ButtonBar.BackgroundColor3 = DARK
+Instance.new("UICorner", ButtonBar).CornerRadius = UDim.new(0,14)
+
+local BarStroke = Instance.new("UIStroke", ButtonBar)
+BarStroke.Color = RED
+BarStroke.Thickness = 2
+BarStroke.Transparency = 0.6
+
+--------------------------------------------------
+-- EXECUTE ALL
+--------------------------------------------------
+local ExecBtn = Instance.new("TextButton", ButtonBar)
+ExecBtn.Size = UDim2.fromOffset(180,32)
+ExecBtn.Position = UDim2.new(0.03,0,0.5,-16)
+ExecBtn.Text = "EXECUTE ALL"
+ExecBtn.Font = Enum.Font.GothamBlack
+ExecBtn.TextSize = 14
+ExecBtn.TextColor3 = WHITE
+ExecBtn.BackgroundColor3 = Color3.fromRGB(24,24,28)
+Instance.new("UICorner", ExecBtn).CornerRadius = UDim.new(0,8)
+
+ExecBtn.MouseButton1Click:Connect(function()
+    for _,fn in ipairs(Loaders) do
+        task.spawn(fn)
+    end
+end)
+
+--------------------------------------------------
+-- REJOIN
+--------------------------------------------------
+local RejoinBtn = Instance.new("TextButton", ButtonBar)
+RejoinBtn.Size = UDim2.fromOffset(140,32)
+RejoinBtn.Position = UDim2.new(0.55,-70,0.5,-16)
+RejoinBtn.Text = "REJOIN"
+RejoinBtn.Font = Enum.Font.GothamBlack
+RejoinBtn.TextSize = 14
+RejoinBtn.TextColor3 = WHITE
+RejoinBtn.BackgroundColor3 = Color3.fromRGB(24,24,28)
+Instance.new("UICorner", RejoinBtn).CornerRadius = UDim.new(0,8)
+
+RejoinBtn.MouseButton1Click:Connect(function()
+    TeleportService:Teleport(game.PlaceId, Player)
+end)
+
+--------------------------------------------------
+-- LEAVE
+--------------------------------------------------
+local LeaveBtn = Instance.new("TextButton", ButtonBar)
+LeaveBtn.Size = UDim2.fromOffset(140,32)
+LeaveBtn.Position = UDim2.new(1,-150,0.5,-16)
+LeaveBtn.Text = "LEAVE"
+LeaveBtn.Font = Enum.Font.GothamBlack
+LeaveBtn.TextSize = 14
+LeaveBtn.TextColor3 = WHITE
+LeaveBtn.BackgroundColor3 = Color3.fromRGB(24,24,28)
+Instance.new("UICorner", LeaveBtn).CornerRadius = UDim.new(0,8)
+
+LeaveBtn.MouseButton1Click:Connect(function()
+    Player:Kick("OP⛓IUM")
+end)
