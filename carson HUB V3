@@ -64,7 +64,7 @@ end
 -- TITLE (ROBLOX SAFE)
 ------------------------------------------------
 local title = Instance.new("TextLabel", main)
-title.Text = "WEED HUB V2\nmade by me • @earnings.1"
+title.Text = " Carson HUB / made by me • @Carsonjib"
 title.Font = Enum.Font.GothamSemibold
 title.TextColor3 = Color3.fromRGB(235,235,255)
 title.TextSize = 15
