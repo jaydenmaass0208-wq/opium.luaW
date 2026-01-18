@@ -11,7 +11,7 @@ local localPlayer = Players.LocalPlayer
 if not localPlayer.Character then
     localPlayer.CharacterAdded:Wait()
 end
-task.wait(0.2)
+task.wait(0.1)
 
 -- hi
 local function findRemoteExact()
@@ -202,7 +202,7 @@ task.spawn(function()
         if stealRemote then
             break
         end
-        task.wait(0.3)
+        task.wait(0.1)
     end
     
     if stealRemote then
